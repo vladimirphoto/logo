@@ -50,7 +50,7 @@
         <img id="img1" src="wow.png" alt="">
         <img id="img3" src="logo.png" alt="" style="position:absolute;opacity:0">
       </div>
-      <div class="face" id="second"><img id="img2" src="logo.png" alt=""></div>
+      <div class="face" id="second"><img id="img2" src="wow.png" alt=""></div>
     </div>
   </div>
 </div>
@@ -68,7 +68,8 @@ const KEEP  = q.get('keep') === '1';
 const EVERY = +(q.get('every') || 30) * 1000; // период, мс
 const HOLD  = +(q.get('hold') || 2200);
 const SHOW  = +(q.get('show') || 5000);
-const SPIN  = 2400;
+const SPIN  = 2800;
+const FADE  = 600;
 
 const wrap = document.getElementById('wrap');
 const spinner = document.getElementById('spinner');
@@ -96,17 +97,17 @@ async function play() {
 
   await sleep(HOLD);
 
-  // вращение 540°: 0–90° лицо (wow), 90–270° обратная сторона (logo),
-  // на 270° (ребро, лицевая сторона не видна) на лицевой wow меняется на logo,
-  // 270–540° логотип остаётся виден, пустоты нет
-  img1.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0, offset: .5001 }, { opacity: 0 }], opt(SPIN, { easing: 'linear' }));
-  img3.animate([{ opacity: 0 }, { opacity: 0, offset: .5 }, { opacity: 1, offset: .5001 }, { opacity: 1 }], opt(SPIN, { easing: 'linear' }));
+  // 2 полных оборота (720°) с wow, логотип пока скрыт
   await spinner.animate(
     [{ transform: 'scale(1) rotateY(0deg)' },
-     { transform: 'scale(1.12) rotateY(270deg)', offset: .5 },
-     { transform: 'scale(1) rotateY(540deg)' }],
+     { transform: 'scale(1.12) rotateY(360deg)', offset: .5 },
+     { transform: 'scale(1) rotateY(720deg)' }],
     opt(SPIN)
   ).finished;
+
+  // после последнего вращения wow плавно заменяется логотипом
+  img1.animate([{ opacity: 1 }, { opacity: 0 }], opt(FADE, { easing: 'linear' }));
+  await img3.animate([{ opacity: 0 }, { opacity: 1 }], opt(FADE, { easing: 'linear' })).finished;
 
   if (KEEP) return;
 
