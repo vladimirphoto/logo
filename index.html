@@ -39,14 +39,17 @@
 
   /* первый логотип чуть меньше, чтобы визуально совпадал по размеру с ником */
   #first img { max-height: 92%; }
-  #second { transform: rotateY(180deg); opacity: 0; }
+  #second { transform: rotateY(180deg); }
 </style>
 </head>
 <body>
 <div class="stage">
   <div class="wrap" id="wrap">
     <div class="spinner" id="spinner">
-      <div class="face" id="first"><img id="img1" src="wow.png" alt=""></div>
+      <div class="face" id="first">
+        <img id="img1" src="wow.png" alt="">
+        <img id="img3" src="logo.png" alt="" style="position:absolute;opacity:0">
+      </div>
       <div class="face" id="second"><img id="img2" src="logo.png" alt=""></div>
     </div>
   </div>
@@ -71,6 +74,8 @@ const wrap = document.getElementById('wrap');
 const spinner = document.getElementById('spinner');
 const first = document.getElementById('first');
 const second = document.getElementById('second');
+const img1 = document.getElementById('img1');
+const img3 = document.getElementById('img3');
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function loaded(img) {
@@ -81,8 +86,7 @@ async function play() {
   const started = performance.now();
   const opt = (d, extra = {}) => ({ duration: d, fill: 'forwards', easing: 'ease-in-out', ...extra });
 
-  [wrap, spinner, first, second].forEach(el => el.getAnimations().forEach(a => a.cancel()));
-  first.style.opacity = 1; second.style.opacity = 0;
+  [wrap, spinner, img1, img3].forEach(el => el.getAnimations().forEach(a => a.cancel()));
 
   // появление первого логотипа (wow)
   await wrap.animate(
@@ -92,9 +96,11 @@ async function play() {
 
   await sleep(HOLD);
 
-  // вращение: 540°, на 270° (ребро) подменяем wow на логотип с ником
-  first.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0, offset: .5001 }, { opacity: 0 }], opt(SPIN, { easing: 'linear' }));
-  second.animate([{ opacity: 0 }, { opacity: 0, offset: .5 }, { opacity: 1, offset: .5001 }, { opacity: 1 }], opt(SPIN, { easing: 'linear' }));
+  // вращение 540°: 0–90° лицо (wow), 90–270° обратная сторона (logo),
+  // на 270° (ребро, лицевая сторона не видна) на лицевой wow меняется на logo,
+  // 270–540° логотип остаётся виден, пустоты нет
+  img1.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0, offset: .5001 }, { opacity: 0 }], opt(SPIN, { easing: 'linear' }));
+  img3.animate([{ opacity: 0 }, { opacity: 0, offset: .5 }, { opacity: 1, offset: .5001 }, { opacity: 1 }], opt(SPIN, { easing: 'linear' }));
   await spinner.animate(
     [{ transform: 'scale(1) rotateY(0deg)' },
      { transform: 'scale(1.12) rotateY(270deg)', offset: .5 },
