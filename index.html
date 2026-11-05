@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>yanejonny stream intro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  .stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 1600px;
+  }
+  .spinner {
+    position: relative;
+    width: min(80vw, 80vh * 1.5);
+    aspect-ratio: 1.5 / 1;
+    transform-style: preserve-3d;
+    opacity: 0;
+  }
+  .face {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    backface-visibility: hidden;
+  }
+  .face img {
+    max-width: 100%; max-height: 100%;
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,.55));
+  }
+  /* первый логотип чуть меньше, чтобы визуально совпадал по размеру с ником */
+  #first img { max-height: 92%; }
+  #second { transform: rotateY(180deg); opacity: 0; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="spinner" id="spinner">
+    <div class="face" id="first"><img id="img1" src="wow.png" alt=""></div>
+    <div class="face" id="second"><img id="img2" src="logo.png" alt=""></div>
+  </div>
+</div>
+
+<script>
+/* Настройки через ссылку:
+   ?loop=1      повторять бесконечно
+   ?hold=2500   сколько мс держать первый логотип (по умолчанию 2200)
+   ?show=4000   сколько мс держать итоговый логотип с ником (по умолчанию 5000)
+   ?keep=1      не исчезать в конце, остаться на экране */
+const q = new URLSearchParams(location.search);
+const LOOP = q.get('loop') === '1';
+const KEEP = q.get('keep') === '1';
+const HOLD = +(q.get('hold') || 2200);
+const SHOW = +(q.get('show') || 5000);
+const SPIN = 2400;
+
+const spinner = document.getElementById('spinner');
+const first = document.getElementById('first');
+const second = document.getElementById('second');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function loaded(img) {
+  return img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; });
+}
+
+async function play() {
+  const opt = (d, extra = {}) => ({ duration: d, fill: 'forwards', easing: 'ease-in-out', ...extra });
+
+  [spinner, first, second].forEach(el => el.getAnimations().forEach(a => a.cancel()));
+  first.style.opacity = 1; second.style.opacity = 0;
+
+  // появление первого логотипа
+  await spinner.animate(
+    [{ opacity: 0, transform: 'scale(.85) rotateY(0deg)' }, { opacity: 1, transform: 'scale(1) rotateY(0deg)' }],
+    opt(700, { easing: 'ease-out' })
+  ).finished;
+
+  await sleep(HOLD);
+
+  // вращение: 540°, на 270° (ребро) подменяем первый логотип на второй
+  first.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0, offset: .5001 }, { opacity: 0 }], opt(SPIN, { easing: 'linear' }));
+  second.animate([{ opacity: 0 }, { opacity: 0, offset: .5 }, { opacity: 1, offset: .5001 }, { opacity: 1 }], opt(SPIN, { easing: 'linear' }));
+  await spinner.animate(
+    [{ transform: 'scale(1) rotateY(0deg)' },
+     { transform: 'scale(1.12) rotateY(270deg)', offset: .5 },
+     { transform: 'scale(1) rotateY(540deg)' }],
+    opt(SPIN)
+  ).finished;
+
+  if (KEEP) return;
+  await sleep(SHOW);
+
+  // исчезновение
+  await spinner.animate(
+    [{ opacity: 1, transform: 'scale(1) rotateY(540deg)' }, { opacity: 0, transform: 'scale(.9) rotateY(540deg)' }],
+    opt(600)
+  ).finished;
+
+  if (LOOP) { await sleep(800); play(); }
+}
+
+Promise.all([loaded(document.getElementById('img1')), loaded(document.getElementById('img2'))]).then(play);
+</script>
+</body>
+</html>
