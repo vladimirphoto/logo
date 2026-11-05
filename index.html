@@ -6,11 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+
   .stage {
     position: fixed; inset: 0;
     display: flex; align-items: center; justify-content: center;
     perspective: 1600px;
   }
+
   /* обёртка только для плавного появления/исчезновения (без 3D) */
   .wrap {
     position: relative;
@@ -18,11 +20,13 @@
     aspect-ratio: 1.5 / 1;
     opacity: 0;
   }
+
   /* 3D-контейнер: здесь крутится, прозрачности не трогаем */
   .spinner {
     position: absolute; inset: 0;
     transform-style: preserve-3d;
   }
+
   .face {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -32,6 +36,7 @@
     max-width: 100%; max-height: 100%;
     filter: drop-shadow(0 10px 24px rgba(0,0,0,.55));
   }
+
   /* первый логотип чуть меньше, чтобы визуально совпадал по размеру с ником */
   #first img { max-height: 92%; }
   #second { transform: rotateY(180deg); opacity: 0; }
@@ -46,45 +51,48 @@
     </div>
   </div>
 </div>
- 
+
 <script>
 /* Настройки через ссылку:
-   ?loop=1      повторять бесконечно
-   ?hold=2500   сколько мс держать первый логотип (по умолчанию 2200)
-   ?show=4000   сколько мс держать итоговый логотип с ником (по умолчанию 5000)
-   ?keep=1      не исчезать в конце, остаться на экране */
+   ?every=30   период повтора в секундах — от начала одного показа до начала следующего (по умолчанию 30)
+   ?loop=0     показать один раз и не повторять
+   ?hold=2500  сколько мс держать первый логотип (по умолчанию 2200)
+   ?show=4000  сколько мс держать итоговый логотип с ником (по умолчанию 5000)
+   ?keep=1     не исчезать в конце, остаться на экране (повтор отключается) */
 const q = new URLSearchParams(location.search);
-const LOOP = q.get('loop') === '1';
-const KEEP = q.get('keep') === '1';
-const HOLD = +(q.get('hold') || 2200);
-const SHOW = +(q.get('show') || 5000);
-const SPIN = 2400;
- 
+const LOOP  = q.get('loop') !== '0';          // повтор включён по умолчанию
+const KEEP  = q.get('keep') === '1';
+const EVERY = +(q.get('every') || 30) * 1000; // период, мс
+const HOLD  = +(q.get('hold') || 2200);
+const SHOW  = +(q.get('show') || 5000);
+const SPIN  = 2400;
+
 const wrap = document.getElementById('wrap');
 const spinner = document.getElementById('spinner');
 const first = document.getElementById('first');
 const second = document.getElementById('second');
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
- 
 function loaded(img) {
   return img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; });
 }
- 
+
 async function play() {
+  const started = performance.now();
   const opt = (d, extra = {}) => ({ duration: d, fill: 'forwards', easing: 'ease-in-out', ...extra });
- 
+
   [wrap, spinner, first, second].forEach(el => el.getAnimations().forEach(a => a.cancel()));
   first.style.opacity = 1; second.style.opacity = 0;
- 
-  // появление первого логотипа
+
+  // появление первого логотипа (wow)
   await wrap.animate(
     [{ opacity: 0 }, { opacity: 1 }],
     opt(700, { easing: 'ease-out' })
   ).finished;
- 
+
   await sleep(HOLD);
- 
-  // вращение: 540°, на 270° (ребро) подменяем первый логотип на второй
+
+  // вращение: 540°, на 270° (ребро) подменяем wow на логотип с ником
   first.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0, offset: .5001 }, { opacity: 0 }], opt(SPIN, { easing: 'linear' }));
   second.animate([{ opacity: 0 }, { opacity: 0, offset: .5 }, { opacity: 1, offset: .5001 }, { opacity: 1 }], opt(SPIN, { easing: 'linear' }));
   await spinner.animate(
@@ -93,19 +101,25 @@ async function play() {
      { transform: 'scale(1) rotateY(540deg)' }],
     opt(SPIN)
   ).finished;
- 
+
   if (KEEP) return;
+
   await sleep(SHOW);
- 
+
   // исчезновение
   await wrap.animate(
     [{ opacity: 1 }, { opacity: 0 }],
     opt(600)
   ).finished;
- 
-  if (LOOP) { await sleep(800); play(); }
+
+  // ждём, пока с начала показа не пройдёт EVERY (по умолчанию 30 с), и запускаем снова
+  if (LOOP) {
+    const elapsed = performance.now() - started;
+    await sleep(Math.max(1000, EVERY - elapsed));
+    play();
+  }
 }
- 
+
 Promise.all([loaded(document.getElementById('img1')), loaded(document.getElementById('img2'))]).then(play);
 </script>
 </body>
