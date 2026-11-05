@@ -11,12 +11,17 @@
     display: flex; align-items: center; justify-content: center;
     perspective: 1600px;
   }
-  .spinner {
+  /* обёртка только для плавного появления/исчезновения (без 3D) */
+  .wrap {
     position: relative;
     width: min(80vw, 80vh * 1.5);
     aspect-ratio: 1.5 / 1;
-    transform-style: preserve-3d;
     opacity: 0;
+  }
+  /* 3D-контейнер: здесь крутится, прозрачности не трогаем */
+  .spinner {
+    position: absolute; inset: 0;
+    transform-style: preserve-3d;
   }
   .face {
     position: absolute; inset: 0;
@@ -34,12 +39,14 @@
 </head>
 <body>
 <div class="stage">
-  <div class="spinner" id="spinner">
-    <div class="face" id="first"><img id="img1" src="wow.png" alt=""></div>
-    <div class="face" id="second"><img id="img2" src="logo.png" alt=""></div>
+  <div class="wrap" id="wrap">
+    <div class="spinner" id="spinner">
+      <div class="face" id="first"><img id="img1" src="wow.png" alt=""></div>
+      <div class="face" id="second"><img id="img2" src="logo.png" alt=""></div>
+    </div>
   </div>
 </div>
-
+ 
 <script>
 /* Настройки через ссылку:
    ?loop=1      повторять бесконечно
@@ -52,30 +59,31 @@ const KEEP = q.get('keep') === '1';
 const HOLD = +(q.get('hold') || 2200);
 const SHOW = +(q.get('show') || 5000);
 const SPIN = 2400;
-
+ 
+const wrap = document.getElementById('wrap');
 const spinner = document.getElementById('spinner');
 const first = document.getElementById('first');
 const second = document.getElementById('second');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-
+ 
 function loaded(img) {
   return img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; });
 }
-
+ 
 async function play() {
   const opt = (d, extra = {}) => ({ duration: d, fill: 'forwards', easing: 'ease-in-out', ...extra });
-
-  [spinner, first, second].forEach(el => el.getAnimations().forEach(a => a.cancel()));
+ 
+  [wrap, spinner, first, second].forEach(el => el.getAnimations().forEach(a => a.cancel()));
   first.style.opacity = 1; second.style.opacity = 0;
-
+ 
   // появление первого логотипа
-  await spinner.animate(
-    [{ opacity: 0, transform: 'scale(.85) rotateY(0deg)' }, { opacity: 1, transform: 'scale(1) rotateY(0deg)' }],
+  await wrap.animate(
+    [{ opacity: 0 }, { opacity: 1 }],
     opt(700, { easing: 'ease-out' })
   ).finished;
-
+ 
   await sleep(HOLD);
-
+ 
   // вращение: 540°, на 270° (ребро) подменяем первый логотип на второй
   first.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0, offset: .5001 }, { opacity: 0 }], opt(SPIN, { easing: 'linear' }));
   second.animate([{ opacity: 0 }, { opacity: 0, offset: .5 }, { opacity: 1, offset: .5001 }, { opacity: 1 }], opt(SPIN, { easing: 'linear' }));
@@ -85,19 +93,19 @@ async function play() {
      { transform: 'scale(1) rotateY(540deg)' }],
     opt(SPIN)
   ).finished;
-
+ 
   if (KEEP) return;
   await sleep(SHOW);
-
+ 
   // исчезновение
-  await spinner.animate(
-    [{ opacity: 1, transform: 'scale(1) rotateY(540deg)' }, { opacity: 0, transform: 'scale(.9) rotateY(540deg)' }],
+  await wrap.animate(
+    [{ opacity: 1 }, { opacity: 0 }],
     opt(600)
   ).finished;
-
+ 
   if (LOOP) { await sleep(800); play(); }
 }
-
+ 
 Promise.all([loaded(document.getElementById('img1')), loaded(document.getElementById('img2'))]).then(play);
 </script>
 </body>
