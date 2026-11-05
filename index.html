@@ -69,7 +69,6 @@ const EVERY = +(q.get('every') || 30) * 1000; // период, мс
 const HOLD  = +(q.get('hold') || 2200);
 const SHOW  = +(q.get('show') || 5000);
 const SPIN  = 2800;
-const FADE  = 600;
 
 const wrap = document.getElementById('wrap');
 const spinner = document.getElementById('spinner');
@@ -97,17 +96,18 @@ async function play() {
 
   await sleep(HOLD);
 
-  // 2 полных оборота (720°) с wow, логотип пока скрыт
+  // 2 оборота (720°) с wow. Логотип появляется только в самом конце:
+  // на последнем ребре (630°) лицевая сторона меняется с wow на logo
+  // и разворачивается уже логотипом до 720°
+  const swapAt = 630 / 720;
+  img1.animate([{ opacity: 1 }, { opacity: 1, offset: swapAt }, { opacity: 0, offset: swapAt + .0001 }, { opacity: 0 }], opt(SPIN));
+  img3.animate([{ opacity: 0 }, { opacity: 0, offset: swapAt }, { opacity: 1, offset: swapAt + .0001 }, { opacity: 1 }], opt(SPIN));
   await spinner.animate(
     [{ transform: 'scale(1) rotateY(0deg)' },
      { transform: 'scale(1.12) rotateY(360deg)', offset: .5 },
      { transform: 'scale(1) rotateY(720deg)' }],
     opt(SPIN)
   ).finished;
-
-  // после последнего вращения wow плавно заменяется логотипом
-  img1.animate([{ opacity: 1 }, { opacity: 0 }], opt(FADE, { easing: 'linear' }));
-  await img3.animate([{ opacity: 0 }, { opacity: 1 }], opt(FADE, { easing: 'linear' })).finished;
 
   if (KEEP) return;
 
